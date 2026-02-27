@@ -6,6 +6,8 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      - TZ=${TZ:-Europe/Madrid}
     volumes:
       - ./state:/data
       - ./oracle-api-key.pem:/secrets/oracle-api-key.pem:ro

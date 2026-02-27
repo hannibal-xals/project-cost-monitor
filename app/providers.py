@@ -15,7 +15,7 @@ class ProviderResult:
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now().astimezone().isoformat()
 
 
 def get_oracle_monthly_cost_eur(config: Config) -> ProviderResult:

@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime
 import requests
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now().astimezone().isoformat()
 
 
 def _read_state(path: str) -> dict:

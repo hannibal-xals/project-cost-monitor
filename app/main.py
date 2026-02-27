@@ -4,7 +4,7 @@ import json
 import os
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from flask import Flask, jsonify
 
 from .config import Config
@@ -17,7 +17,7 @@ app = Flask(__name__)
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now().astimezone().isoformat()
 
 
 def collect_and_store() -> dict:
