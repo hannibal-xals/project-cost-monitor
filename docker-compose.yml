@@ -9,4 +9,27 @@ services:
     volumes:
       - ./state:/data
       - ./oracle-api-key.pem:/secrets/oracle-api-key.pem:ro
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=project-hub-edge
+      - traefik.http.routers.cost-status.rule=Host(`hub.${BASE_DOMAIN:-xalslab.cloud}`) && Path(`/cost-status`)
+      - traefik.http.routers.cost-status.entrypoints=websecure
+      - traefik.http.routers.cost-status.tls=true
+      - traefik.http.routers.cost-status.tls.certresolver=letsencrypt
+      - traefik.http.routers.cost-status.middlewares=secure-headers
+      - traefik.http.services.cost-status.loadbalancer.server.port=8080
+      - traefik.http.routers.cost-health.rule=Host(`hub.${BASE_DOMAIN:-xalslab.cloud}`) && Path(`/cost-health`)
+      - traefik.http.routers.cost-health.entrypoints=websecure
+      - traefik.http.routers.cost-health.tls=true
+      - traefik.http.routers.cost-health.tls.certresolver=letsencrypt
+      - traefik.http.routers.cost-health.middlewares=secure-headers
+      - traefik.http.routers.cost-health.service=cost-status
     restart: unless-stopped
+    networks:
+      - default
+      - edge
+
+networks:
+  edge:
+    external: true
+    name: project-hub-edge
