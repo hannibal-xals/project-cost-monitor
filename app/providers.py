@@ -1,0 +1,110 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Dict, Any
+import requests
+
+from .config import Config
+
+
+@dataclass
+class ProviderResult:
+    cost_eur: float
+    health: Dict[str, Any]
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def get_oracle_monthly_cost_eur(config: Config) -> ProviderResult:
+    if config.use_mock_data:
+        return ProviderResult(
+            cost_eur=config.mock_oracle_eur,
+            health={"status": "mock", "message": "Using mock Oracle cost", "checked_at": _now_iso()},
+        )
+
+    required = [config.oracle_tenant_id, config.oracle_user_ocid, config.oracle_fingerprint, config.oracle_private_key_path]
+    if not all(required):
+        return ProviderResult(
+            cost_eur=0.0,
+            health={
+                "status": "error",
+                "message": "Oracle credentials missing (tenant/user/fingerprint/key)",
+                "checked_at": _now_iso(),
+            },
+        )
+
+    # Placeholder adapter: OCI Cost Analysis API requires signed requests.
+    return ProviderResult(
+        cost_eur=0.0,
+        health={
+            "status": "error",
+            "message": "Oracle live adapter not implemented in MVP (requires OCI request signing)",
+            "checked_at": _now_iso(),
+        },
+    )
+
+
+def get_cloudflare_monthly_cost_eur(config: Config) -> ProviderResult:
+    if config.use_mock_data:
+        return ProviderResult(
+            cost_eur=config.mock_cloudflare_eur,
+            health={"status": "mock", "message": "Using mock Cloudflare cost", "checked_at": _now_iso()},
+        )
+
+    if not config.cloudflare_api_token:
+        return ProviderResult(
+            cost_eur=0.0,
+            health={"status": "error", "message": "Cloudflare API token missing", "checked_at": _now_iso()},
+        )
+
+    url = "https://api.cloudflare.com/client/v4/user/billing/history"
+    headers = {
+        "Authorization": f"Bearer {config.cloudflare_api_token}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        resp = requests.get(url, headers=headers, timeout=20)
+        if resp.status_code != 200:
+            return ProviderResult(
+                cost_eur=0.0,
+                health={
+                    "status": "error",
+                    "message": f"Cloudflare API HTTP {resp.status_code}",
+                    "checked_at": _now_iso(),
+                },
+            )
+
+        payload = resp.json()
+        if not payload.get("success"):
+            return ProviderResult(
+                cost_eur=0.0,
+                health={
+                    "status": "error",
+                    "message": "Cloudflare API response success=false",
+                    "checked_at": _now_iso(),
+                },
+            )
+
+        total = 0.0
+        for entry in payload.get("result", []):
+            amount = float(entry.get("amount", 0) or 0)
+            currency = str(entry.get("currency", "USD")).upper()
+            if currency == "EUR":
+                total += amount
+            else:
+                # MVP assumption: non-EUR ignored unless a conversion service is added.
+                pass
+
+        return ProviderResult(
+            cost_eur=round(total, 2),
+            health={"status": "ok", "message": "Cloudflare live API", "checked_at": _now_iso()},
+        )
+    except Exception as exc:
+        return ProviderResult(
+            cost_eur=0.0,
+            health={"status": "error", "message": f"Cloudflare request failed: {exc}", "checked_at": _now_iso()},
+        )

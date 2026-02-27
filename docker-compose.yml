@@ -1,0 +1,11 @@
+services:
+  cost-monitor:
+    build: .
+    container_name: project-cost-monitor
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./state:/data
+    restart: unless-stopped
