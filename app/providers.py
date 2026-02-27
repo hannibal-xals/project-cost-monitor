@@ -25,26 +25,77 @@ def get_oracle_monthly_cost_eur(config: Config) -> ProviderResult:
             health={"status": "mock", "message": "Using mock Oracle cost", "checked_at": _now_iso()},
         )
 
-    required = [config.oracle_tenant_id, config.oracle_user_ocid, config.oracle_fingerprint, config.oracle_private_key_path]
+    required = [
+        config.oracle_tenant_id,
+        config.oracle_user_ocid,
+        config.oracle_fingerprint,
+        config.oracle_private_key_path,
+        config.oracle_region,
+    ]
     if not all(required):
         return ProviderResult(
             cost_eur=0.0,
             health={
                 "status": "error",
-                "message": "Oracle credentials missing (tenant/user/fingerprint/key)",
+                "message": "Oracle credentials missing (tenant/user/fingerprint/key/region)",
                 "checked_at": _now_iso(),
             },
         )
 
-    # Placeholder adapter: OCI Cost Analysis API requires signed requests.
-    return ProviderResult(
-        cost_eur=0.0,
-        health={
-            "status": "error",
-            "message": "Oracle live adapter not implemented in MVP (requires OCI request signing)",
-            "checked_at": _now_iso(),
-        },
-    )
+    try:
+        import oci
+
+        oci_cfg = {
+            "user": config.oracle_user_ocid,
+            "fingerprint": config.oracle_fingerprint,
+            "tenancy": config.oracle_tenant_id,
+            "region": config.oracle_region,
+            "key_file": config.oracle_private_key_path,
+        }
+
+        usage_client = oci.usage_api.UsageapiClient(oci_cfg)
+
+        now = datetime.now(timezone.utc)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if month_start.month == 12:
+            month_end = month_start.replace(year=month_start.year + 1, month=1)
+        else:
+            month_end = month_start.replace(month=month_start.month + 1)
+
+        details = oci.usage_api.models.RequestSummarizedUsagesDetails(
+            tenant_id=config.oracle_tenant_id,
+            time_usage_started=month_start,
+            time_usage_ended=month_end,
+            granularity="MONTHLY",
+            query_type="COST",
+        )
+
+        resp = usage_client.request_summarized_usages(details)
+        items = getattr(resp.data, "items", []) or []
+
+        total = 0.0
+        for item in items:
+            cost = getattr(item, "computed_amount", None)
+            unit = str(getattr(item, "computed_amount_unit", "")).upper()
+            if cost is None:
+                continue
+            # We only add native EUR amounts in MVP.
+            if "EUR" in unit or unit == "":
+                total += float(cost)
+
+        return ProviderResult(
+            cost_eur=round(total, 2),
+            health={"status": "ok", "message": "Oracle live API", "checked_at": _now_iso()},
+        )
+    except Exception as exc:
+        return ProviderResult(
+            cost_eur=0.0,
+            health={
+                "status": "error",
+                "message": f"Oracle request failed: {exc}",
+                "checked_at": _now_iso(),
+            },
+        )
 
 
 def get_cloudflare_monthly_cost_eur(config: Config) -> ProviderResult:

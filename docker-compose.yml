@@ -8,4 +8,5 @@ services:
       - .env
     volumes:
       - ./state:/data
+      - ./oracle-api-key.pem:/secrets/oracle-api-key.pem:ro
     restart: unless-stopped

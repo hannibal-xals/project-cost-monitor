@@ -20,7 +20,7 @@ MVP dockerizado para monitorizar coste mensual de **Oracle + Cloudflare** en **E
 
 ## Estado adaptadores MVP
 
-- **Oracle:** adaptador placeholder con error explícito en modo live (falta firma OCI); funciona en mock.
+- **Oracle:** implementación live vía OCI Usage API (request signing con API key).
 - **Cloudflare:** implementación live básica contra `user/billing/history` (suma importes en EUR).
 
 ## Quick start
