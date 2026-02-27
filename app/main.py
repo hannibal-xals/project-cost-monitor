@@ -17,7 +17,7 @@ app = Flask(__name__)
 
 
 def _now_iso() -> str:
-    return datetime.now().astimezone().isoformat()
+    return datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S')
 
 
 def collect_and_store() -> dict:

@@ -7,7 +7,7 @@ import requests
 
 
 def _now_iso() -> str:
-    return datetime.now().astimezone().isoformat()
+    return datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S')
 
 
 def _read_state(path: str) -> dict:

@@ -15,7 +15,7 @@ class ProviderResult:
 
 
 def _now_iso() -> str:
-    return datetime.now().astimezone().isoformat()
+    return datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S')
 
 
 def get_oracle_monthly_cost_eur(config: Config) -> ProviderResult:
